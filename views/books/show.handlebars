@@ -1,0 +1,48 @@
+<h1>{{book.title}}</h1>
+{{#if authors}}
+  Written by {{#each authors}}{{this.firstName}} {{this.lastName}}{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
+<p>
+  Originally published in {{book.publishingYear}}
+</p>
+{{#if genre}}
+  <p>
+    genre: {{genre.genre}}
+  </p>
+{{/if}}
+
+{{!-- Add comments --}}
+{{#if currentUser}}
+  <div class="add-comment">
+    <h3>Add comment</h3>
+    <form action="/comments" method="POST">
+      <input type="hidden" name="_csrf" value="{{_csrfToken}}">
+      <input type="hidden" name="bookId" value="{{book.id}}">
+      <div class="form-group">
+        <textarea name="text" class="form-control" rows="3" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+  </div>
+{{/if}}
+
+{{!-- Display and edit the relevant comments --}}
+<div class="comments">
+  <h3>Comments</h3>
+  {{#if comments}}
+    <ul>
+      {{#each comments}}
+        <li>
+          <strong>{{this.userEmail}}:</strong> {{this.text}}
+          {{#if ../currentUser}}
+            {{#if (eq this.userEmail ../currentUser.email)}}
+              <a href="/comments/{{this.id}}/edit" class="edit-comment">Edit</a>
+            {{/if}}
+          {{/if}}
+        </li>
+      {{/each}}
+    </ul>
+  {{else}}
+    <p>No comments yet.</p>
+  {{/if}}
+</div>
