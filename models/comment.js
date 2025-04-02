@@ -29,8 +29,6 @@ const comments = [
     });
     }
     exports.AllForBook = (bookId) => {
-    return comments.filter((comment) => {
-    return comment.bookId == bookId;
-    });
-    }
+        return comments.filter(comment => comment.bookId === String(bookId));
+      };
     

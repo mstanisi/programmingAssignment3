@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Comment = require('../models/comment');
+const Book = require('../models/book');
 
 // Edit comment form
 router.get('/:id/edit', (req, res) => {
@@ -43,16 +44,23 @@ router.post('/', (req, res) => {
     return res.status(403).send('Forbidden');
   }
 
+  if (!req.body.bookId) {
+    return res.status(400).send('Missing book ID');
+  }
+
+  const book = Book.get(req.body.bookId); 
+  if (!book) {
+    return res.status(404).send('Book not found');
+  }
+
   const newComment = {
-    bookId: req.body.bookId,
+    bookId: book.id,
     userEmail: req.session.currentUser.email,
     text: req.body.text
   };
 
-  console.log('Adding comment:', newComment); // Debug
-
   Comment.add(newComment);
-  res.redirect(`/books/show/${req.body.bookId}`);
+  res.redirect(`/books/show/${book.id}`);
 });
 
 module.exports = router;

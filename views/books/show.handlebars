@@ -13,17 +13,17 @@
 
 {{!-- Add comments --}}
 {{#if currentUser}}
-  <div class="add-comment">
-    <h3>Add comment</h3>
-    <form action="/comments" method="POST">
-      <input type="hidden" name="_csrf" value="{{_csrfToken}}">
-      <input type="hidden" name="bookId" value="{{book.id}}">
-      <div class="form-group">
-        <textarea name="text" class="form-control" rows="3" required></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary">Submit</button>
-    </form>
-  </div>
+<div class="add-comment">
+  <h3>Add comment</h3>
+  <form action="/comments" method="POST">
+    <input type="hidden" name="_csrf" value="{{_csrfToken}}">
+    <input type="hidden" name="bookId" value="{{book.id}}"> <!-- Already correct -->
+    <div class="form-group">
+      <textarea name="text" class="form-control" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+</div>
 {{/if}}
 
 {{!-- Display and edit the relevant comments --}}

@@ -40,6 +40,15 @@ router.get('/edit', async (req, res, next) => {
 });
 
 router.get('/show/:id', async (req, res, next) => {
+  const book = Book.get(req.params.id);
+  if (!book) {
+    return res.status(404).send('Book not found');
+  }
+  var templateVars = {
+    title: "BookedIn || show",
+    book: book,
+    bookId: book.id // Add this line to ensure template gets the proper ID
+  };
   var templateVars = {
     title: "BookedIn || show",
     book: Book.get(req.params.id)
