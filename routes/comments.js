@@ -1,66 +1,46 @@
 const express = require('express');
 const router = express.Router();
 const Comment = require('../models/comment');
-const Book = require('../models/book');
 
-// Edit comment form
-router.get('/:id/edit', (req, res) => {
-  if (!req.session.currentUser) {
-    return res.redirect('/users/login');
-  }
-  
-  const comment = Comment.get(req.params.id);
-  if (comment.userEmail !== req.session.currentUser.email) {
-    return res.status(403).send('Forbidden');
-  }
-  
-  res.render('comments/edit', {
-    title: "Edit Comment",
-    comment: comment,
-    bookId: comment.bookId
-  });
-});
-
-// Update comment
-router.post('/:id', (req, res) => {
-  if (!req.session.currentUser) {
-    return res.redirect('/users/login');
-  }
-  
-  const comment = Comment.get(req.params.id);
-  if (comment.userEmail !== req.session.currentUser.email) {
-    return res.status(403).send('Forbidden');
-  }
-  
-  comment.text = req.body.text;
-  Comment.upsert(comment);
-  
-  res.redirect(`/books/show/${comment.bookId}`);
-});
-
-// Add new comment
-router.post('/', (req, res) => {
-  if (!req.session.currentUser) {
-    return res.status(403).send('Forbidden');
-  }
-
-  if (!req.body.bookId) {
-    return res.status(400).send('Missing book ID');
-  }
-
-  const book = Book.get(req.body.bookId); 
-  if (!book) {
-    return res.status(404).send('Book not found');
-  }
-
-  const newComment = {
-    bookId: book.id,
-    userEmail: req.session.currentUser.email,
-    text: req.body.text
+function notAuthorized(req, res, returnUrl) {
+  req.session.flash = {
+    type: 'danger',
+    intro: 'Error!',
+    message: `You are not authorized to edit this comment!`,
   };
+  res.redirect(303, returnUrl);
+  return;
+}
 
-  Comment.add(newComment);
-  res.redirect(`/books/show/${book.id}`);
+router.get('/edit', async (req, res, next) => {
+  let commentId = req.query.id;
+  let comment = await Comment.get(commentId);
+  if (! comment) {
+    return notAuthorized(req, res, `/books/show/${comment.bookId}`);
+  }
+  if (! req.session.currentUser){
+    return notAuthorized(req, res, `/`);
+  }
+  if (req.session.currentUser.id != comment.userId){
+    return notAuthorized(req, res, `/books/show/${comment.bookId}`);
+  }
+  res.render('comments/form', { title: 'BookedIn || Genres', comment: comment });
 });
+
+router.post('/upsert', async (req, res, next) => {
+  console.log('body: ' + JSON.stringify(req.body));
+  let comment = await Comment.get(req.body.id);
+  if (req.session.currentUser.id != comment.userId){
+    return notAuthorized(req, res, `/books/show/${comment.bookId}`);
+  }
+  await Comment.upsert(req.body);
+  req.session.flash = {
+    type: 'info',
+    intro: 'Success!',
+    message: `Your comment has been updated!`,
+  };
+  res.redirect(303, `/books/show/${comment.bookId}`);
+});
+
 
 module.exports = router;

@@ -9,14 +9,16 @@
         <strong>{{flash.intro}}</strong> {{{flash.message}}}
       </div>
     {{/if}}
-     <nav>
+    <nav>
       <ul>
         <li><a href="/">BookedIn home</a></li>
+        <li><a href="/genres">Genres</a></li>
         <li><a href="/authors">Authors</a></li>
         <li><a href="/books">books</a></li>
-        <li><a href="/genres">Genres</a></li>
         {{#if currentUser}}
-          Welcome {{currentUser.name}}
+          <li>
+            <a href="/users/profile">Welcome {{currentUser.name}}</a>
+          </li>
           <li>
             <form action="/users/logout" role="form" method="post">
               <input type="hidden" name="_csrf" value="{{_csrfToken}}">
@@ -24,8 +26,12 @@
             </form>
           </li>
         {{else}}
-          <li><a href="/users/register">register</a></li>
-          <li><a href="/users/login">login</a></li>
+          <li>
+            <a href="/users/register">register</a>
+          </li>
+          <li>
+            <a href="/users/login">login</a>
+          </li>
         {{/if}}
       </ul>
     </nav>

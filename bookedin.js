@@ -1,13 +1,42 @@
-const express = require("express");
-const path = require("path");
-const { credentials } = require('./config');
+const express = require('express')
+const bodyParser = require('body-parser')
+const cookieParser = require('cookie-parser')
+const expressSession = require('express-session')
+const csrf = require('csurf')
 
-// Initialize app first
-const app = express();
-const port = 3000;
+const { credentials } = require('./config')
 
-// Handlebars configuration
-const handlebars = require('express-handlebars').create({
+const indexRouter = require('./routes/index');
+const authorsRouter = require('./routes/authors');
+const booksRouter = require('./routes/books');
+const usersRouter = require('./routes/users');
+const genresRouter = require('./routes/genres');
+const booksUsersRouter = require('./routes/books_users');
+const commentsRouter = require('./routes/comments');
+
+const app = express()
+const port = 3000
+
+//extra platform setup
+app.use(bodyParser.urlencoded({ extended: true }))
+app.use(cookieParser(credentials.cookieSecret));
+app.use(expressSession({
+  secret: credentials.cookieSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
+}));
+
+// this must come after we link in body-parser,
+// cookie-parser, and express-session
+app.use(csrf({ cookie: true }))
+app.use((req, res, next) => {
+  res.locals._csrfToken = req.csrfToken()
+  next()
+})
+
+// view engine setup
+var handlebars = require('express-handlebars').create({
   helpers: {
     eq: (v1, v2) => v1 == v2,
     ne: (v1, v2) => v1 != v2,
@@ -16,95 +45,55 @@ const handlebars = require('express-handlebars').create({
     lte: (v1, v2) => v1 <= v2,
     gte: (v1, v2) => v1 >= v2,
     and() {
-      return Array.prototype.every.call(arguments, Boolean);
+        return Array.prototype.every.call(arguments, Boolean);
     },
     or() {
-      return Array.prototype.slice.call(arguments, 0, -1).some(Boolean);
+        return Array.prototype.slice.call(arguments, 0, -1).some(Boolean);
     },
     someId: (arr, id) => arr && arr.some(obj => obj.id == id),
     in: (arr, obj) => arr && arr.some(val => val == obj),
     dateStr: (v) => v && v.toLocaleDateString("en-US")
-  },
-  layoutsDir: path.join(__dirname, 'views/layouts'),
-  partialsDir: path.join(__dirname, 'views/partials')
+  }
 });
-
-// 1. Template Engine Setup
 app.engine('handlebars', handlebars.engine);
 app.set('view engine', 'handlebars');
-app.set('views', path.join(__dirname, 'views'));
 
-// 2. Body Parsing Middleware
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-
-// 3. Static Files (if you have any)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// 4. Session/Cookie Middleware
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-app.use(cookieParser(credentials.cookieSecret));
-app.use(session({
-  secret: credentials.cookieSecret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: { 
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-    httpOnly: true
-  }
-}));
-
-// 5. CSRF Protection (must come after session)
-const csrf = require('csurf');
-app.use(csrf({ cookie: true }));
-
-// 6. Response Local Variables
+// session configuration
+//make it possible to use flash messages, and pass them to the view
 app.use((req, res, next) => {
-  res.locals._csrfToken = req.csrfToken();
-  res.locals.currentUser = req.session.currentUser;
-  res.locals.flash = req.session.flash;
-  if (req.session.flash) delete req.session.flash;
-  next();
-});
+  res.locals.flash = req.session.flash
+  delete req.session.flash
+  next()
+})
+//make the current user available in views
+app.use((req, res, next) => {
+  res.locals.currentUser = req.session.currentUser
+  next()
+})
 
-// 7. Route Handlers
-const indexRouter = require('./routes/index');
-const authorsRouter = require('./routes/authors');
-const booksRouter = require('./routes/books');
-const usersRouter = require('./routes/users');
-const genresRouter = require('./routes/genres');
-const commentsRouter = require('./routes/comments');
-
+// routes
 app.use('/', indexRouter);
 app.use('/authors', authorsRouter);
 app.use('/books', booksRouter);
 app.use('/users', usersRouter);
 app.use('/genres', genresRouter);
+app.use('/books_users', booksUsersRouter);
 app.use('/comments', commentsRouter);
 
-// 8. Error Handlers (must come after routes)
+// custom 404 page
 app.use((req, res) => {
-  res.status(404).send(`
-    <h1>404 - Not Found</h1>
-    <p>The page you requested doesn't exist.</p>
-  `);
-});
+  res.status(404)
+  res.send('<h1>404 - Not Found</h1>')
+})
 
+// custom 500 page
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send(`
-    <h1>500 - Server Error</h1>
-    <p>Something went wrong:</p>
-    <pre>${err.message}</pre>
-  `);
-});
+  console.error(err.message)
+  res.type('text/plain')
+  res.status(500)
+  res.send('500 - Server Error')
+})
 
-// Start Server
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-  console.log('Available routes:');
-  console.log('GET  /books/show/:id');
-  console.log('POST /comments');
-  console.log('GET  /comments/:id/edit');
-});
+app.listen(port, () => console.log(
+`Express started on http://localhost:${port}; ` +
+`press Ctrl-C to terminate.`))

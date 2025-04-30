@@ -1,39 +1,39 @@
 const express = require('express');
 const router = express.Router();
-
-const helpers = require('./helpers')
-
 const User = require('../models/user');
-
+const Book = require('../models/book');
+const BookUser = require('../models/book_user');
+const helpers = require('./helpers')
 
 router.get('/register', async (req, res, next) => {
   if (helpers.isLoggedIn(req, res)) {
     return
   }
-  res.render('users/register', { title: 'BookedIn || User registration' });
+  res.render('users/register', { title: 'BookedIn || Registration' });
 });
 
 router.post('/register', async (req, res, next) => {
+  console.log('body: ' + JSON.stringify(req.body));
   if (helpers.isLoggedIn(req, res)) {
     return
   }
-  console.log('body: ' + JSON.stringify(req.body))
-  let result = User.register(req.body);
-  if (result) {
-    req.session.flash = {
-      type: 'info',
-      intro: 'Success!',
-      message: `the user ${req.body.name} has been created!`,
-    };
-    res.redirect(303, '/')
-  } else {
+  const user = await User.getByEmail(req.body.email)
+  if (user) {
     res.render('users/register', {
-      title: 'BookedIn || User registration',
+      title: 'BookedIn || Login',
       flash: {
         type: 'danger',
         intro: 'Error!',
-        message: `This user already exists`}
+        message: `A user with this email already exists`}
     });
+  } else {
+    await User.add(req.body);
+    req.session.flash = {
+      type: 'info',
+      intro: 'Success!',
+      message: `the user has been created!`,
+    };
+    res.redirect(303, '/');
   }
 });
 
@@ -41,47 +41,50 @@ router.get('/login', async (req, res, next) => {
   if (helpers.isLoggedIn(req, res)) {
     return
   }
-  res.render('users/login', { title: 'BookedIn || User login' });
+  res.render('users/login', { title: 'BookedIn || Login' });
 });
 
 router.post('/login', async (req, res, next) => {
+  console.log('body: ' + JSON.stringify(req.body));
   if (helpers.isLoggedIn(req, res)) {
     return
   }
-  console.log('body: ' + JSON.stringify(req.body))
-  let user = User.login(req.body);
-  if(user) {
-    req.session.currentUser = user;
+  const user = await User.login(req.body)
+  if (user) {
+    req.session.currentUser = user
     req.session.flash = {
       type: 'info',
       intro: 'Success!',
-      message: `the user ${user.name} has been logged in!`,
+      message: 'You are now logged in',
     };
-    res.redirect(303, '/')
+    res.redirect(303, '/');
   } else {
     res.render('users/login', {
-      title: 'BookedIn || User Login',
+      title: 'BookedIn || Login',
       flash: {
         type: 'danger',
         intro: 'Error!',
         message: `Wrong email and password combination or the user could not be found`}
     });
-
   }
 });
 
 router.post('/logout', async (req, res, next) => {
-  console.log('body: ' + JSON.stringify(req.body))
-  let user = req.session.currentUser
   delete req.session.currentUser
-
   req.session.flash = {
     type: 'info',
     intro: 'Success!',
-    message: `the user ${user.name} has been logged out!`,
+    message: 'You are now logged out',
   };
-  res.redirect(303, '/')
+  res.redirect(303, '/');
+});
+
+router.get('/profile', async (req, res, next) => {
+  if (helpers.isNotLoggedIn(req, res)) {
+    return
+  }
+  const booksUser = await BookUser.AllForUser(req.session.currentUser);
+  res.render('users/profile', { title: 'BookedIn || Profile', user: req.session.currentUser, booksUser: booksUser });
 });
 
 module.exports = router;
-
